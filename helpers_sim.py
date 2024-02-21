@@ -92,7 +92,7 @@ def train_test_model(args, train_data, test_data, model, loss_fn, rotmat_targets
     for e in range(args.epochs):
         start_time = time.time()
 
-        if args.dataset is not 'static':
+        if args.dataset != 'static':
             beachball = (args.dataset == 'dynamic_beachball')
             beachball_factors = args.beachball_sigma_factors
             train_data, test_data = create_experimental_data_fast(args.N_train, args.N_test, args.matches_per_sample, max_rotation_angle=args.max_rotation_angle, sigma=args.sim_sigma, beachball=beachball, beachball_factors=beachball_factors, device=device, dtype=tensor_type)
@@ -236,7 +236,7 @@ def train_test_models_with_plots(args, train_data, test_data, models, loss_fns, 
         for e in range(args.epochs):
             start_time = time.time()
 
-            if args.dataset is not 'static':
+            if args.dataset != 'static':
                 beachball = (args.dataset == 'dynamic_beachball')
                 beachball_factors = args.beachball_sigma_factors
                 train_data, test_data = create_experimental_data_fast(args.N_train, args.N_test, args.matches_per_sample,
@@ -437,11 +437,38 @@ def gen_sim_data_beachball(N_rotations, N_matches_per_rotation, sigma, factors, 
     x_2 = C.bmm(x_1) + noise
     return C, x_1, x_2
 
+def gen_sim_data_bottle(N_rotations, N_matches_per_rotation, sigma, factors, dtype=torch.double):
+    # load mustard bottle point and downsample
+
+    C = SO3_torch.exp(torch.randn(N_rotations, 3, dtype=dtype)).as_matrix()
+
+    import open3d as o3d
+    path = "/hri/localdisk2/datasets/YCB_Video_Dataset/models/006_mustard_bottle/textured_simple_colored.ply"
+    pcd = o3d.io.read_point_cloud(path)
+    pcd = pcd.uniform_down_sample(20)
+    points = np.asarray(pcd.points)
+
+    # random choice N_matches_per_rotation from points
+    inds = np.random.permutation(points.shape[0])[:N_matches_per_rotation]
+    points = points[inds]
+    points = points.T
+
+    x_1 = torch.from_numpy(points).double()
+    x_1 = x_1[None, ...].repeat(N_rotations, 1, 1) 
+
+    noise = torch.randn_like(x_1)/1e5
+    x_2 = C.bmm(x_1) + noise
+    return C, x_1, x_2
+
+
 def create_experimental_data_fast(N_train=2000, N_test=50, N_matches_per_sample=100, sigma=0.01, beachball=False, max_rotation_angle=None, beachball_factors=None, device=torch.device('cpu'), dtype=torch.double):
     
     if beachball:
         C_train, x_1_train, x_2_train = gen_sim_data_beachball(N_train, N_matches_per_sample, sigma, beachball_factors)
         C_test, x_1_test, x_2_test = gen_sim_data_beachball(N_test, N_matches_per_sample, sigma, beachball_factors)
+        #C_train, x_1_train, x_2_train = gen_sim_data_bottle(N_train, N_matches_per_sample, sigma, beachball_factors)
+        #C_test, x_1_test, x_2_test = gen_sim_data_bottle(N_test, N_matches_per_sample, sigma, beachball_factors)
+
     else:
         C_train, x_1_train, x_2_train = gen_sim_data_fast(N_train, N_matches_per_sample, sigma, max_rotation_angle=max_rotation_angle)
         C_test, x_1_test, x_2_test = gen_sim_data_fast(N_test, N_matches_per_sample, sigma, max_rotation_angle=max_rotation_angle)
