@@ -1,4 +1,5 @@
 # A Smooth Representation of SO(3) for Deep Rotation Learning with Uncertainty
+A forked repo from A Smooth Representation of SO(3) for Deep Rotation Learning with Uncertainty, 
 #### Valentin Peretroukhin, Matthew Giamou, David M. Rosen, W. Nicholas Greene, Nicholas Roy, and Jonathan Kelly
 *Robotics: Science and Systems (2020)*
 
